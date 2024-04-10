@@ -11,7 +11,7 @@ def calculate_age(created_at, closed_at, merged_at):
 
     start_time = datetime.strptime(created_at, "%Y-%m-%dT%H:%M:%SZ")
     age = end_time - start_time
-    return age.total_seconds() / 3600  # Convertendo para horas
+    return age.total_seconds() / 3600
 
 def get_repository_info(repository):
     repo_node = repository['node']
@@ -112,9 +112,9 @@ def main():
     repositories_info = []
     end_cursor = ""
     variables = {}
-    repoCont = 0
+    # repoCont = 0
 
-    while len(repositories_info) < 200:
+    while len(repositories_info) < 2:
         if end_cursor == "":
             query_starter = query.replace(', after: $after', "")
             query_starter = query_starter.replace('($after: String)', "")
@@ -134,12 +134,12 @@ def main():
             download_repository(repo_url)
 
             # Delete repository
-            delete_repository(f"{repository_info['Repository name']}")
+            # delete_repository(f"{repository_info['Repository name']}")
 
         if data['data']['search']['pageInfo']['hasNextPage']:
             end_cursor = data['data']['search']['pageInfo']['endCursor']
 
-        repoCont += 20
+        # repoCont += 20
 
     # Create csv: 200 pull request list
     with open('repositories_info_graphql.csv', 'w', newline='') as fp:
