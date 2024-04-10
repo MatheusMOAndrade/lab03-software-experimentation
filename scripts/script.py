@@ -96,7 +96,7 @@ def main():
     while len(repositories_info) < 200:
         if end_cursor == "":
             query_starter = query.replace(', after: $after', "")
-            query_starter = query_starter.replace('($after: String!)', "")
+            query_starter = query_starter.replace('($after: String)', "")
             response = requests.post(endpoint, json={'query': query_starter}, headers=headers)
         else:
             variables['after'] = end_cursor
