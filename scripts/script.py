@@ -1,23 +1,44 @@
 import csv
 import requests
 from datetime import datetime
-import subprocess
 import os
 
-def calculate_age(created_at):
-    created_at_date = datetime.strptime(created_at, "%Y-%m-%dT%H:%M:%SZ")
-    current_date = datetime.now()
-    age = current_date - created_at_date
-    return age.days
+def calculate_age(created_at, closed_at, merged_at):
+    if merged_at:
+        end_time = datetime.strptime(merged_at, "%Y-%m-%dT%H:%M:%SZ")
+    else:
+        end_time = datetime.strptime(closed_at, "%Y-%m-%dT%H:%M:%SZ")
+
+    start_time = datetime.strptime(created_at, "%Y-%m-%dT%H:%M:%SZ")
+    age = end_time - start_time
+    return age.total_seconds() / 3600  # Convertendo para horas
 
 def get_repository_info(repository):
     repo_node = repository['node']
     name = repo_node['name']
     owner = repo_node['owner']['login']
 
+    pull_requests = repo_node['pullRequests']['edges']
+
+    pr_metrics = []
+    for pr in pull_requests:
+        pr_node = pr['node']
+        metrics = {
+            'Files count': pr_node['files']['totalCount'],
+            'Additions': pr_node['additions'],
+            'Deletions': pr_node['deletions'],
+            'Description length': len(pr_node['bodyText']),
+            'Interactions': pr_node['participants']['totalCount'],
+            'Comments': pr_node['comments']['totalCount']
+        }
+        analysis_time = calculate_age(pr_node['createdAt'], pr_node['closedAt'], pr_node['mergedAt'])
+        metrics['Analysis time (hours)'] = analysis_time
+        pr_metrics.append(metrics)
+
     return {
         'Repository name': name,
         'Repository owner': owner,
+        'Pull Request metrics': pr_metrics
     }
 
 def download_repository(repo_url):
@@ -120,14 +141,14 @@ def main():
 
         repoCont += 20
 
-    # Create csv: 1000 repository list
-    # with open('repositories_info_graphql.csv', 'w', newline='') as fp:
-    #     fieldnames = repositories_info[0].keys()
-    #     writer = csv.DictWriter(fp, fieldnames=fieldnames)
+    # Create csv: 200 pull request list
+    with open('repositories_info_graphql.csv', 'w', newline='') as fp:
+        fieldnames = ['Repository name', 'Repository owner', 'Pull Request metrics']
+        writer = csv.DictWriter(fp, fieldnames=fieldnames)
         
-    #     writer.writeheader()
-    #     for info in repositories_info:
-    #         writer.writerow(info)
+        writer.writeheader()
+        for info in repositories_info:
+            writer.writerow(info)
         
 if __name__ == "__main__":
     main()
