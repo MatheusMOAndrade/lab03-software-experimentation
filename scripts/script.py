@@ -1,7 +1,6 @@
 import csv
 import requests
 from datetime import datetime
-import os
 
 def calculate_age(created_at, closed_at, merged_at):
     if merged_at:
@@ -41,12 +40,6 @@ def get_repository_info(repository):
         'Pull Request metrics': pr_metrics
     }
 
-def download_repository(repo_url):
-    os.system(f"git clone {repo_url}")
-
-def delete_repository(directory):
-    os.system(f'rmdir /s /q {directory}')
-
 def main():
     token = 'TOKEN'
     headers = {'Authorization': f'Bearer {token}'}
@@ -68,9 +61,6 @@ def main():
             login
           }
           releases {
-            totalCount
-          }
-          stargazers {
             totalCount
           }
           pullRequests(first: 100, states: [MERGED, CLOSED], after: null) {
@@ -106,15 +96,14 @@ def main():
       }
     }
   }
-}     
+}
 '''
 
     repositories_info = []
     end_cursor = ""
     variables = {}
-    # repoCont = 0
 
-    while len(repositories_info) < 2:
+    while len(repositories_info) < 200:
         if end_cursor == "":
             query_starter = query.replace(', after: $after', "")
             query_starter = query_starter.replace('($after: String)', "")
@@ -125,25 +114,25 @@ def main():
 
         data = response.json()
 
-        for repository in data['data']['search']['edges']:           
-            repository_info = get_repository_info(repository)
-            repositories_info.append(repository_info) 
-
-            # Download repository
-            repo_url = f"https://github.com/{repository_info['Repository owner']}/{repository_info['Repository name']}.git"
-            download_repository(repo_url)
-
-            # Delete repository
-            # delete_repository(f"{repository_info['Repository name']}")
+        try:
+            for repository in data['data']['search']['edges']:           
+                try:
+                    repository_info = get_repository_info(repository)
+                    repositories_info.append(repository_info)
+                except KeyError as e:
+                    print(f"Erro ao processar repositório: {e}. Ignorando este repositório.")
+        except KeyError as e:
+            print(f"Erro ao acessar dados do objeto 'data': {e}. Finalizando o processamento.")
+            break
 
         if data['data']['search']['pageInfo']['hasNextPage']:
             end_cursor = data['data']['search']['pageInfo']['endCursor']
-
-        # repoCont += 20
+        else:
+            break
 
     # Create csv: 200 pull request list
     with open('repositories_info_graphql.csv', 'w', newline='') as fp:
-        fieldnames = ['Repository name', 'Repository owner', 'Pull Request metrics']
+        fieldnames = ['Repository name', 'Repository owner']
         writer = csv.DictWriter(fp, fieldnames=fieldnames)
         
         writer.writeheader()
