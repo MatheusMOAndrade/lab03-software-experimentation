@@ -120,9 +120,9 @@ def main():
                     repository_info = get_repository_info(repository)
                     repositories_info.append(repository_info)
                 except KeyError as e:
-                    print(f"Erro ao processar repositório: {e}. Ignorando este repositório.")
+                    print(f"Error processing repository: {e} - Ignoring this repository")
         except KeyError as e:
-            print(f"Erro ao acessar dados do objeto 'data': {e}. Finalizando o processamento.")
+            print(f"Error accessing data from object 'data': {e} - Finishing processing")
             break
 
         if data['data']['search']['pageInfo']['hasNextPage']:
