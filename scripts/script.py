@@ -1,6 +1,7 @@
 import csv
 import requests
 from datetime import datetime
+import time
 
 def calculate_age(created_at, closed_at, merged_at):
     if merged_at:
@@ -111,6 +112,16 @@ def main():
         else:
             variables['after'] = end_cursor
             response = requests.post(endpoint, json={'query': query, 'variables': variables}, headers=headers)
+
+        #Check response headers for ratelimits - Start
+        remaining_requests = int(response.headers.get('X-RateLimit-Remaining', 0))
+        if remaining_requests == 0:
+            reset_time = int(response.headers.get('X-RateLimit-Reset', 0))
+            sleep_time = max(0, reset_time - time.time()) + 5  # 5+ segundos
+            print(f"Ratelimit reached - Waiting {sleep_time} ...")
+            time.sleep(sleep_time)
+            continue
+        #Check response headers for ratelimits - End
 
         data = response.json()
 
