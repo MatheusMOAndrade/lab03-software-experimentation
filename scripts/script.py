@@ -1,102 +1,153 @@
-import csv
-import requests
-from datetime import datetime
+import requests as req
+import pandas as pd
 import time
+import os
 
-def calculate_age(created_at, closed_at, merged_at):
-    if merged_at:
-        end_time = datetime.strptime(merged_at, "%Y-%m-%dT%H:%M:%SZ")
-    else:
-        end_time = datetime.strptime(closed_at, "%Y-%m-%dT%H:%M:%SZ")
-
-    start_time = datetime.strptime(created_at, "%Y-%m-%dT%H:%M:%SZ")
-    age = end_time - start_time
-    return age.total_seconds() / 3600
-
-def check_rate_limit(response):
-    remaining_requests = int(response.headers.get('X-RateLimit-Remaining', 0))
-    if remaining_requests == 0:
-        reset_time = int(response.headers.get('X-RateLimit-Reset', 0))
-        sleep_time = max(0, reset_time - time.time()) + 5 
-        print(f"Rate limit reached - Waiting {sleep_time} seconds...")
-        time.sleep(sleep_time)
-
-def get_repository_info(repository):
-    repo_node = repository['node']
-    name = repo_node['name']
-    owner = repo_node['owner']['login']
-
-    pull_requests = repo_node['pullRequests']['edges']
-
-    pr_metrics = []
-    for pr in pull_requests:
-        pr_node = pr['node']
-        metrics = {
-            'Files count': pr_node['files']['totalCount'],
-            'Additions': pr_node['additions'],
-            'Deletions': pr_node['deletions'],
-            'Description length': len(pr_node['bodyText']),
-            'Interactions': pr_node['participants']['totalCount'],
-            'Comments': pr_node['comments']['totalCount']
-        }
-        analysis_time = calculate_age(pr_node['createdAt'], pr_node['closedAt'], pr_node['mergedAt'])
-        metrics['Analysis time (hours)'] = analysis_time
-        pr_metrics.append(metrics)
-
-    return {
-        'Repository name': name,
-        'Repository owner': owner,
-        'Pull Request metrics': pr_metrics
-    }
-
-def main():
+def post(data):
     token = 'TOKEN'
-    headers = {'Authorization': f'Bearer {token}'}
-    endpoint = 'https://api.github.com/graphql'
-    query = '''
-    query ($after: String) {
-  search(query: "stars:>1", type: REPOSITORY, first: 1, after: $after) {
-    pageInfo {
-      endCursor
-      hasNextPage
+    response = req.post('https://api.github.com/graphql', headers={'Authorization': f'Bearer {token}'}, json=data)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        raise Exception(f'Request error: {response.status_code} \n {response.text}')
+
+def fetch_repositories():
+    repositories = []
+    after = None
+    while len(repositories) < 2:
+        variables = {"after": after}
+        data = post({'query': repo_query, 'variables': variables})
+        if 'errors' in data:
+            print("GraphQL query failed:", data['errors'])
+            break
+        if 'search' in data['data'] and 'edges' in data['data']['search']:
+            for edge in data['data']['search']['edges']:
+                node = edge['node']
+                if 'pullRequests' in node and node['pullRequests']['totalCount'] >= 100:
+                    repositories.append(node)
+            if data['data']['search']['pageInfo']['hasNextPage']:
+                after = data['data']['search']['pageInfo']['endCursor']
+            else:
+                break
+            time.sleep(0.002)
+    return repositories
+
+def save_csv(data, filename):
+    directory = '../lab03-software-experimentation'
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    filepath = os.path.join(directory, filename)
+    data.to_csv(filepath, index=False, sep=';')
+
+def process_repositories(repositories):
+    processed_data = pd.DataFrame()
+    processed_data['Repository name'] = [repo.get('name') for repo in repositories]
+    processed_data['Repository owner'] = [repo.get('owner', {}).get('login') for repo in repositories]
+    processed_data['Stars'] = [repo.get('stargazers', {}).get('totalCount', 0) if isinstance(repo, dict) else 0 for repo in repositories]
+    processed_data['Total Pull Requests'] = [repo.get('pullRequests', {}).get('totalCount',0) if isinstance(repo, dict) else 0 for repo in repositories]
+    
+    save_csv(processed_data, 'processed_data.csv')
+    
+    return processed_data
+
+def process_pull_request(row):
+    pull_requests_data = []
+    name = row['Repository name']
+    owner = row['Repository owner']
+
+    variables = {"name": name, "owner": owner}
+    try:
+        data_pulls = post({'query': pullRequest_query, 'variables': variables})
+        if 'errors' in data_pulls:
+            print("GraphQL query failed:", data_pulls['errors'])
+        for edge in data_pulls['data']['repository']['pullRequests']['edges']:
+            values = edge['node']
+            pull_requests_data.append({
+                'Owner': owner,
+                'Repository name': name,
+                'Title': values['title'],
+                'Pull Request Number': values['number'],
+                'Pull Request Created At': values['createdAt'],
+                'Pull Request Closed At': values['closedAt'],
+                'Total files': values['files']['totalCount'],
+                'Additions': values['additions'],
+                'Deletions': values['deletions'],
+                'Total reviews': values['reviews']['totalCount'],
+                'Review decision': values['reviewDecision'],
+                'Participants': values['participants']['totalCount'],
+                'Comments': values['comments']['totalCount'],
+                'Body Text': values['bodyText']
+            })
+    except Exception as ex:
+        print(f"Exception occurred for repository '{name}' owned by '{owner}': {ex}")
+        
+    return pull_requests_data
+
+def fetch_pull_requests(processed_data):
+    pull_requests_data = processed_data.apply(process_pull_request, axis=1).sum()
+    
+    dataFrame_final = pd.DataFrame(pull_requests_data)
+    
+    save_csv(dataFrame_final, 'processed_data_pullRequests.csv')
+    
+    return dataFrame_final
+
+# Queries
+repo_query = '''
+    query search($after: String) {
+      search(query: "stars:>0", type: REPOSITORY, first: 1, after: $after) {
+        pageInfo {
+          endCursor
+          hasNextPage
+        }
+        edges {
+          node {
+            ... on Repository {
+              name
+              owner {
+                login
+              }
+              pullRequests(states: [MERGED, CLOSED], first: 100) {
+                totalCount
+              }
+            }
+          }
+        }
+      }
     }
-    edges {
-      node {
-        ... on Repository {
-          name
-          createdAt
-          updatedAt
-          owner {
-            login
-          }
-          releases {
-            totalCount
-          }
-          pullRequests(first: 100, states: [MERGED, CLOSED], after: null) {
-            totalCount
-            edges {
-              node {
-                additions
-                deletions
-                files {
-                  totalCount
-                }
-                createdAt
-                closedAt
-                mergedAt
-                bodyText
-                reviews(first: 1) {
-                  totalCount
-                  nodes {
+'''
+
+pullRequest_query = '''
+    query getPullRequests($name: String!, $owner: String!) {
+      repository(name: $name, owner: $owner) {
+        pullRequests(states: [MERGED, CLOSED], first: 100) {
+          edges {
+            node {
+              number
+              title
+              createdAt
+              closedAt
+              additions
+              deletions
+              bodyText
+              files {
+                totalCount
+              }
+              participants {
+                totalCount
+              }
+              comments {
+                totalCount
+              }
+              reviewDecision
+              reviews(first: 1) {
+                totalCount
+                edges {
+                  node {
                     createdAt
+                    updatedAt
                     state
                   }
-                }
-                participants {
-                  totalCount
-                }
-                comments {
-                  totalCount
                 }
               }
             }
@@ -104,51 +155,9 @@ def main():
         }
       }
     }
-  }
-}
 '''
 
-    repositories_info = []
-    end_cursor = ""
-    variables = {}
-
-    while len(repositories_info) < 200:
-        if end_cursor == "":
-            query_starter = query.replace(', after: $after', "")
-            query_starter = query_starter.replace('($after: String)', "")
-            response = requests.post(endpoint, json={'query': query_starter}, headers=headers)
-        else:
-            variables['after'] = end_cursor
-            response = requests.post(endpoint, json={'query': query, 'variables': variables}, headers=headers)
-
-        check_rate_limit(response)
-        data = response.json()
-
-        try:
-            for repository in data['data']['search']['edges']:           
-                try:
-                    repository_info = get_repository_info(repository)
-                    repositories_info.append(repository_info)
-                except KeyError as e:
-                    print(f"Error processing repository: {e} - Ignoring this repository")
-        except KeyError as e:
-            print(f"Error accessing data from object 'data': {e} - Finishing processing")
-            break
-
-        if data['data']['search']['pageInfo']['hasNextPage']:
-            end_cursor = data['data']['search']['pageInfo']['endCursor']
-            time.sleep(0.002)
-        else:
-            break
-
-    # Create csv: 200 pull request list
-    with open('repositories_info_graphql.csv', 'w', newline='') as fp:
-        fieldnames = ['Repository name', 'Repository owner']
-        writer = csv.DictWriter(fp, fieldnames=fieldnames)
-        
-        writer.writeheader()
-        for info in repositories_info:
-            writer.writerow(info)
-        
 if __name__ == "__main__":
-    main()
+    repositories = fetch_repositories()
+    processed_data = process_repositories(repositories)
+    dataFrame_final = fetch_pull_requests(processed_data)
