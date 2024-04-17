@@ -13,6 +13,14 @@ def calculate_age(created_at, closed_at, merged_at):
     age = end_time - start_time
     return age.total_seconds() / 3600
 
+def check_rate_limit(response):
+    remaining_requests = int(response.headers.get('X-RateLimit-Remaining', 0))
+    if remaining_requests == 0:
+        reset_time = int(response.headers.get('X-RateLimit-Reset', 0))
+        sleep_time = max(0, reset_time - time.time()) + 5 
+        print(f"Rate limit reached - Waiting {sleep_time} seconds...")
+        time.sleep(sleep_time)
+
 def get_repository_info(repository):
     repo_node = repository['node']
     name = repo_node['name']
@@ -113,16 +121,7 @@ def main():
             variables['after'] = end_cursor
             response = requests.post(endpoint, json={'query': query, 'variables': variables}, headers=headers)
 
-        #Check response headers for ratelimits - Start
-        remaining_requests = int(response.headers.get('X-RateLimit-Remaining', 0))
-        if remaining_requests == 0:
-            reset_time = int(response.headers.get('X-RateLimit-Reset', 0))
-            sleep_time = max(0, reset_time - time.time()) + 5  # 5+ segundos
-            print(f"Ratelimit reached - Waiting {sleep_time} ...")
-            time.sleep(sleep_time)
-            continue
-        #Check response headers for ratelimits - End
-
+        check_rate_limit(response)
         data = response.json()
 
         try:
@@ -138,6 +137,7 @@ def main():
 
         if data['data']['search']['pageInfo']['hasNextPage']:
             end_cursor = data['data']['search']['pageInfo']['endCursor']
+            time.sleep(0.002)
         else:
             break
 
