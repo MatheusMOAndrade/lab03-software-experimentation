@@ -26,7 +26,7 @@ def fetch_repositories():
     repositories = []
     after = None
     calls_counter = 0
-    while len(repositories) < 2:
+    while len(repositories) < 200:
         variables = {"after": after}
         data = post({'query': repo_query, 'variables': variables})
         calls_counter += 1
@@ -45,7 +45,7 @@ def fetch_repositories():
                 after = data['data']['search']['pageInfo']['endCursor']
             else:
                 break
-            time.sleep(0.002)
+            time.sleep(0.05)
     return repositories
 
 def save_csv(data, filename):
