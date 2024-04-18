@@ -3,8 +3,19 @@ import pandas as pd
 import time
 import os
 
+tokens = ['TOKEN1', 'TOKEN2', 'TOKEN3', 'TOKEN4']
+current_token_index = 0
+
+def get_current_token():
+    global current_token_index
+    return tokens[current_token_index]
+
+def switch_token():
+    global current_token_index
+    current_token_index = (current_token_index + 1) % len(tokens)
+
 def post(data):
-    token = 'TOKEN'
+    token = get_current_token()
     response = req.post('https://api.github.com/graphql', headers={'Authorization': f'Bearer {token}'}, json=data)
     if response.status_code == 200:
         return response.json()
@@ -14,9 +25,14 @@ def post(data):
 def fetch_repositories():
     repositories = []
     after = None
+    calls_counter = 0
     while len(repositories) < 2:
         variables = {"after": after}
         data = post({'query': repo_query, 'variables': variables})
+        calls_counter += 1
+        if calls_counter >= 3000:
+            switch_token()
+            calls_counter = 0
         if 'errors' in data:
             print("GraphQL query failed:", data['errors'])
             break
