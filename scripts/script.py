@@ -123,6 +123,9 @@ repo_query = '''
               owner {
                 login
               }
+              stargazers {
+                totalCount
+              }
               pullRequests(states: [MERGED, CLOSED], first: 100) {
                 totalCount
               }
