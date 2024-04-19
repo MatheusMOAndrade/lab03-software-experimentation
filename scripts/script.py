@@ -24,28 +24,49 @@ def post(data):
 
 def fetch_repositories():
     repositories = []
+    per_page = 1
     after = None
+    query_string = "stars:>0"
+    
     calls_counter = 0
+    
     while len(repositories) < 200:
-        variables = {"after": after}
-        data = post({'query': repo_query, 'variables': variables})
-        calls_counter += 1
-        if calls_counter >= 3000:
-            switch_token()
-            calls_counter = 0
-        if 'errors' in data:
-            print("GraphQL query failed:", data['errors'])
-            break
-        if 'search' in data['data'] and 'edges' in data['data']['search']:
-            for edge in data['data']['search']['edges']:
-                node = edge['node']
-                if 'pullRequests' in node and node['pullRequests']['totalCount'] >= 100:
-                    repositories.append(node)
-            if data['data']['search']['pageInfo']['hasNextPage']:
-                after = data['data']['search']['pageInfo']['endCursor']
-            else:
-                break
-            time.sleep(0.05)
+      variables = {
+          "queryString": query_string,
+          "first": per_page,
+          "after": after
+      }
+      
+      data = post({'query': repo_query, 'variables': variables})
+      
+      calls_counter += 1
+      if calls_counter > 20:
+          switch_token()
+          calls_counter = 0
+      
+      if 'errors' in data:
+          print("GraphQL query failed:", data['errors'])
+          print("Waiting for 60 seconds before retrying...")
+          time.sleep(60)
+          continue
+
+      print(f"Received {len(data['data']['search']['edges'])} repositories in this batch.")
+
+      for edge in data['data']['search']['edges']:
+          node = edge['node']
+          pull_requests_count = node['pullRequests']['totalCount']
+          if pull_requests_count >= 100:
+              repositories.append(node)
+      
+      if data['data']['search']['pageInfo']['hasNextPage']:
+        after = data['data']['search']['pageInfo']['endCursor']
+        print("Fetching next page...")
+      else:
+        print("No more pages.")
+        break
+      
+      time.sleep(1)
+
     return repositories
 
 def save_csv(data, filename):
@@ -60,10 +81,11 @@ def process_repositories(repositories):
     processed_data['Repository name'] = [repo.get('name') for repo in repositories]
     processed_data['Repository owner'] = [repo.get('owner', {}).get('login') for repo in repositories]
     processed_data['Stars'] = [repo.get('stargazers', {}).get('totalCount', 0) if isinstance(repo, dict) else 0 for repo in repositories]
-    processed_data['Total Pull Requests'] = [repo.get('pullRequests', {}).get('totalCount',0) if isinstance(repo, dict) else 0 for repo in repositories]
+    processed_data['Total Pull Requests'] = [repo['pullRequests']['totalCount'] for repo in repositories]
     
     save_csv(processed_data, 'processed_data.csv')
-    
+    print('The repository list has been created')
+
     return processed_data
 
 def process_pull_request(row):
@@ -99,9 +121,22 @@ def process_pull_request(row):
         
     return pull_requests_data
 
-def fetch_pull_requests(processed_data):
+"""def fetch_pull_requests(processed_data):
     pull_requests_data = processed_data.apply(process_pull_request, axis=1).sum()
     
+    dataFrame_final = pd.DataFrame(pull_requests_data)
+    
+    save_csv(dataFrame_final, 'processed_data_pullRequests.csv')
+    
+    return dataFrame_final
+"""
+
+def fetch_pull_requests(processed_data):
+    pull_requests_data = []
+    for _, row in processed_data.iterrows():
+        pull_requests_data.extend(process_pull_request(row))
+        time.sleep(1)
+        
     dataFrame_final = pd.DataFrame(pull_requests_data)
     
     save_csv(dataFrame_final, 'processed_data_pullRequests.csv')
@@ -110,8 +145,8 @@ def fetch_pull_requests(processed_data):
 
 # Queries
 repo_query = '''
-    query search($after: String) {
-      search(query: "stars:>0", type: REPOSITORY, first: 1, after: $after) {
+    query search($queryString: String!, $first: Int, $after: String) {
+      search(query: $queryString, type: REPOSITORY, first: $first, after: $after) {
         pageInfo {
           endCursor
           hasNextPage
