@@ -17,6 +17,7 @@ def switch_token():
 def post(data):
     token = get_current_token()
     response = req.post('https://api.github.com/graphql', headers={'Authorization': f'Bearer {token}'}, json=data)
+
     if response.status_code == 200:
         return response.json()
     else:
@@ -27,7 +28,6 @@ def fetch_repositories():
     per_page = 1
     after = None
     query_string = "stars:>0"
-    
     calls_counter = 0
     
     while len(repositories) < 200:
@@ -71,8 +71,10 @@ def fetch_repositories():
 
 def save_csv(data, filename):
     directory = '../lab03-software-experimentation'
+
     if not os.path.exists(directory):
         os.makedirs(directory)
+
     filepath = os.path.join(directory, filename)
     data.to_csv(filepath, index=False, sep=';')
 
@@ -92,47 +94,52 @@ def process_pull_request(row):
     pull_requests_data = []
     name = row['Repository name']
     owner = row['Repository owner']
-
     variables = {"name": name, "owner": owner}
-    try:
-        data_pulls = post({'query': pullRequest_query, 'variables': variables})
-        if 'errors' in data_pulls:
-            print("GraphQL query failed:", data_pulls['errors'])
-        for edge in data_pulls['data']['repository']['pullRequests']['edges']:
-            values = edge['node']
-            pull_requests_data.append({
-                'Owner': owner,
-                'Repository name': name,
-                'Title': values['title'],
-                'Pull Request Number': values['number'],
-                'Pull Request Created At': values['createdAt'],
-                'Pull Request Closed At': values['closedAt'],
-                'Total files': values['files']['totalCount'],
-                'Additions': values['additions'],
-                'Deletions': values['deletions'],
-                'Total reviews': values['reviews']['totalCount'],
-                'Review decision': values['reviewDecision'],
-                'Participants': values['participants']['totalCount'],
-                'Comments': values['comments']['totalCount'],
-                'Body Text': values['bodyText']
-            })
-    except Exception as ex:
-        print(f"Exception occurred for repository '{name}' owned by '{owner}': {ex}")
-        
-    return pull_requests_data
+    attempts = 0
 
-"""def fetch_pull_requests(processed_data):
-    pull_requests_data = processed_data.apply(process_pull_request, axis=1).sum()
-    
-    dataFrame_final = pd.DataFrame(pull_requests_data)
-    
-    save_csv(dataFrame_final, 'processed_data_pullRequests.csv')
-    
-    return dataFrame_final
-"""
+    while attempts < 5:
+        try:
+            data_pulls = post({'query': pullRequest_query, 'variables': variables})
+
+            if 'errors' in data_pulls:
+                print("GraphQL query failed:", data_pulls['errors'])
+
+            for edge in data_pulls['data']['repository']['pullRequests']['edges']:
+                values = edge['node']
+
+                pull_requests_data.append({
+                    'Owner': owner,
+                    'Repository name': name,
+                    'Title': values['title'],
+                    'Pull Request Number': values['number'],
+                    'Pull Request Created At': values['createdAt'],
+                    'Pull Request Closed At': values['closedAt'],
+                    'Total files': values['files']['totalCount'],
+                    'Additions': values['additions'],
+                    'Deletions': values['deletions'],
+                    'Total reviews': values['reviews']['totalCount'],
+                    'Review decision': values['reviewDecision'],
+                    'Participants': values['participants']['totalCount'],
+                    'Comments': values['comments']['totalCount'],
+                    'Body Text': values['bodyText']
+                })
+
+                switch_token()
+                time.sleep(1)
+
+            break
+        
+        except Exception as ex:
+            attempts += 1
+            print(f"Exception occurred for repository '{name}' owned by '{owner}': {ex}")
+            print(f"Waiting 60 seconds before retrying...")
+            time.sleep(60)
+
+    return pull_requests_data
 
 def fetch_pull_requests(processed_data):
     pull_requests_data = []
+
     for _, row in processed_data.iterrows():
         pull_requests_data.extend(process_pull_request(row))
         time.sleep(1)
