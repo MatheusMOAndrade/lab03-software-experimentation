@@ -15,15 +15,24 @@ def calculate_text_length(data, column):
     data['Text Length'] = data[column].astype(str).apply(len)
     return data
 
-def days_difference(df, column_start, column_end):
+def days_difference(df, column_start, column_1, column_2):
+    list_merge_at = []
     list_closed_at = []
     for _, row in df.iterrows():
         created_at = datetime.fromisoformat(row[column_start])
-        closed_at = datetime.fromisoformat(row[column_end])
+        
+        if isinstance(row[column_1], str):
+            merged_at = datetime.fromisoformat(row[column_1])
+            merge_difference = abs(merged_at - created_at).days
+        else:
+            merge_difference = None
+        list_merge_at.append(merge_difference)
+        
+        closed_at = datetime.fromisoformat(row[column_2])
         closed_difference = abs(closed_at - created_at).days
         list_closed_at.append(closed_difference)
     
-    return list_closed_at
+    return list_merge_at, list_closed_at
 
 def scatter_plot(df, x_column, y_column, x_label=None, y_label=None, title=None, x_range=None, y_range=None):
     plt.figure(figsize=(10, 4))
@@ -50,11 +59,12 @@ data.info()
 data.isna().sum()
 
 # Remover linhas com valores ausentes em colunas essenciais
-essential_columns = ['Repository name', 'Title', 'Pull Request Created At']
+essential_columns = ['Repository name', 'Title', 'Created At']
 data = remove_missing_values(data, essential_columns)
 
-# Diferença entre eventos: criação do PR e fechamento
-closed_diff = days_difference(data, 'Pull Request Created At', 'Pull Request Closed At')
+# Diferença entre eventos: criação do PR, merge e fechamento
+merge_diff, closed_diff = days_difference(data, 'Created At', 'Closed At', 'Merged At')
+data['Merge At'] = merge_diff
 data['Closed At'] = closed_diff
 
 data = calculate_text_length(data, 'Body Text')
@@ -64,7 +74,7 @@ data = calculate_text_length(data, 'Body Text')
 scatter_plot(data, 'Total files', 'Review decision', title='Tamanho dos PRs x Feedback das Revisões')
 
 # RQ 02. Qual a relação entre o tempo de análise dos PRs e o feedback final das revisões?
-scatter_plot(data, 'Closed At', 'Review decision', title='Tempo de Análise x Feedback das Revisões')
+scatter_plot(data, 'Merge At', 'Review decision', title='Tempo de Análise x Feedback das Revisões')
 
 # RQ 03. Qual a relação entre a descrição dos PRs e o feedback final das revisões?
 scatter_plot(data, 'Text Length', 'Review decision', title='Tamanho do Texto x Feedback das Revisões')
@@ -79,7 +89,7 @@ scatter_plot(data, 'Interações', 'Review decision', title='Interações x Feed
 scatter_plot(data, 'Total files', 'Total reviews', title='Tamanho dos PRs x Número de Revisões')
 
 # RQ 06. Qual a relação entre o tempo de análise dos PRs e o número de revisões realizadas?
-scatter_plot(data, 'Closed At', 'Total reviews', title='Tempo de Análise x Número de Revisões')
+scatter_plot(data, 'Merge At', 'Total reviews', title='Tempo de Análise x Número de Revisões')
 
 # RQ 07. Qual a relação entre a descrição dos PRs e o número de revisões realizadas?
 scatter_plot(data, 'Text Length', 'Total reviews', title='Tamanho do Texto x Número de Revisões')
@@ -90,7 +100,7 @@ scatter_plot(data, 'Comments', 'Total reviews', title='Comentários x Número de
 scatter_plot(data, 'Interações', 'Total reviews', title='Interações x Número de Revisões')
 
 # Calculando a correlação de Spearman
-correlation_data = data[['Text Length', 'Closed At', 'Participants', 'Comments', 'Interações', 'Review decision']]
+correlation_data = data[['Text Length', 'Merge At', 'Participants', 'Comments', 'Interações', 'Review decision']]
 correlation_matrix = correlation_data.corr(method='spearman')
 
 correlation_matrix.to_csv('correlation_matrix.csv')
