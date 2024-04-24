@@ -112,8 +112,9 @@ def process_pull_request(row):
                     'Repository name': name,
                     'Title': values['title'],
                     'Pull Request Number': values['number'],
-                    'Pull Request Created At': values['createdAt'],
-                    'Pull Request Closed At': values['closedAt'],
+                    'Created At': values['createdAt'],
+                    'Merged At': values['mergedAt'],
+                    'Closed At': values['closedAt'],
                     'Total files': values['files']['totalCount'],
                     'Additions': values['additions'],
                     'Deletions': values['deletions'],
@@ -187,6 +188,7 @@ pullRequest_query = '''
               number
               title
               createdAt
+              mergedAt
               closedAt
               additions
               deletions
