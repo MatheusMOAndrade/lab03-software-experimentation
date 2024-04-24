@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 from datetime import datetime
 
 def load_data(file_path, separator=';'):
@@ -61,12 +62,11 @@ data.isna().sum()
 essential_columns = ['Repository name', 'Title', 'Created At']
 data = remove_missing_values(data, essential_columns)
 
-# Calcular a diferença em dias entre eventos relevantes, como criação do PR, merge e fechamento
+# Diferença entre eventos: criação do PR, merge e fechamento
 merge_diff, closed_diff = days_difference(data, 'Created At', 'Closed At', 'Merged At')
 data['Merge At'] = merge_diff
 data['Closed At'] = closed_diff
 
-# Calcular o número de caracteres no corpo do texto
 data = calculate_text_length(data, 'Body Text')
 
 # A. Feedback Final das Revisões (Status do PR):
@@ -99,3 +99,12 @@ scatter_plot(data, 'Participants', 'Total reviews', title='Participantes x Núme
 scatter_plot(data, 'Comments', 'Total reviews', title='Comentários x Número de Revisões')
 scatter_plot(data, 'Interações', 'Total reviews', title='Interações x Número de Revisões')
 
+# Calculando a correlação de Spearman
+correlation_data = data[['Text Length', 'Merge At', 'Participants', 'Comments', 'Interações', 'Review decision']]
+correlation_matrix = correlation_data.corr(method='spearman')
+
+correlation_matrix.to_csv('correlation_matrix.csv')
+
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f")
+plt.title('Matriz de Correlação (Spearman)')
+plt.show()
