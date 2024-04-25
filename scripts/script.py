@@ -3,7 +3,7 @@ import pandas as pd
 import time
 import os
 
-tokens = ['TOKEN1', 'TOKEN2', 'TOKEN3', 'TOKEN4']
+tokens = ['TOKEN01', 'TOKEN02', 'TOKEN03', 'TOKEN04']
 current_token_index = 0
 
 def get_current_token():
@@ -97,7 +97,7 @@ def process_pull_request(row):
     variables = {"name": name, "owner": owner}
     attempts = 0
 
-    while attempts < 5:
+    while attempts < 7:
         try:
             data_pulls = post({'query': pullRequest_query, 'variables': variables})
 
