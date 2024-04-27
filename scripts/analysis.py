@@ -38,15 +38,19 @@ def days_difference(df, column_start, column_1, column_2):
     return list_merge_at, list_closed_at
 
 def scatter_plot(df, x_column, y_column, x_label=None, y_label=None, title=None, x_range=None, y_range=None):
+
     plt.figure(figsize=(10, 4))
     plt.scatter(df[x_column], df[y_column])
     plt.xlabel(x_label if x_label else x_column)
     plt.ylabel(y_label if y_label else y_column)
     plt.title(title)
+
     if x_range:
         plt.xlim(x_range)
+
     if y_range:
         plt.ylim(y_range)
+        
     plt.grid(True)
     plt.show()
 
@@ -76,12 +80,12 @@ data['Closed At'] = closed_diff
 
 data = calculate_text_length(data, 'Body Text')
 
-# RQ 01. Qual a relação entre o número de PRs mergeados e fechados e o total de arquivos?
-# Gráfico de dispersão do número de PRs mergeados em relação ao total de arquivos
-scatter_plot(data, 'Merged At', 'Total files', title='Número de PRs Mergeados x Total de Arquivos')
+# # RQ 01. Qual a relação entre o número de PRs mergeados e fechados e o total de arquivos?
+# # Gráfico de dispersão do número de PRs mergeados em relação ao total de arquivos
+# scatter_plot(data, 'Merged At', 'Total files', title='Número de PRs Mergeados x Total de Arquivos')
 
-# Gráfico de dispersão do número de PRs fechados em relação ao total de arquivos
-scatter_plot(data, 'Closed At', 'Total files', title='Número de PRs Fechados x Total de Arquivos')
+# # Gráfico de dispersão do número de PRs fechados em relação ao total de arquivos
+# scatter_plot(data, 'Closed At', 'Total files', title='Número de PRs Fechados x Total de Arquivos')
 
 # RQ 02. Qual a relação entre o número de PRs mergeados e fechados e o tempo de análise dos PRs?
 # Tempo de análise: intervalo entre a criação do PR e a última atividade (fechamento ou merge)
@@ -96,48 +100,48 @@ scatter_plot(data, 'Merged At', 'Merge Analysis Time', title='Número de PRs Mer
 # Gráfico de dispersão do número de PRs fechados em relação ao tempo de análise
 scatter_plot(data, 'Closed At', 'Closed Analysis Time', title='Número de PRs Fechados x Tempo de Análise')
 
-# RQ 03. Qual a relação entre o número de PRs mergeados e fechados e o número de caracteres do corpo de descrição do PR?
-# Gráfico de dispersão do número de PRs mergeados em relação ao tamanho do texto da descrição
-scatter_plot(data, 'Merged At', 'Text Length', title='Número de PRs Mergeados x Tamanho do Texto da Descrição')
+# # RQ 03. Qual a relação entre o número de PRs mergeados e fechados e o número de caracteres do corpo de descrição do PR?
+# # Gráfico de dispersão do número de PRs mergeados em relação ao tamanho do texto da descrição
+# scatter_plot(data, 'Merged At', 'Text Length', title='Número de PRs Mergeados x Tamanho do Texto da Descrição')
 
-# Gráfico de dispersão do número de PRs fechados em relação ao tamanho do texto da descrição
-scatter_plot(data, 'Closed At', 'Text Length', title='Número de PRs Fechados x Tamanho do Texto da Descrição')
+# # Gráfico de dispersão do número de PRs fechados em relação ao tamanho do texto da descrição
+# scatter_plot(data, 'Closed At', 'Text Length', title='Número de PRs Fechados x Tamanho do Texto da Descrição')
 
-# RQ 04. Qual a relação entre o número de PRs mergeados e fechados e o número de comentários?
-# Gráfico de dispersão do número de PRs mergeados em relação ao número de comentários
-scatter_plot(data, 'Merged At', 'Comments', title='Número de PRs Mergeados x Número de Comentários')
+# # RQ 04. Qual a relação entre o número de PRs mergeados e fechados e o número de comentários?
+# # Gráfico de dispersão do número de PRs mergeados em relação ao número de comentários
+# scatter_plot(data, 'Merged At', 'Comments', title='Número de PRs Mergeados x Número de Comentários')
 
-# Gráfico de dispersão do número de PRs fechados em relação ao número de comentários
-scatter_plot(data, 'Closed At', 'Comments', title='Número de PRs Fechados x Número de Comentários')
+# # Gráfico de dispersão do número de PRs fechados em relação ao número de comentários
+# scatter_plot(data, 'Closed At', 'Comments', title='Número de PRs Fechados x Número de Comentários')
 
-# B. Número de Revisões:
-# RQ 05. Qual a relação entre o tamanho dos PRs e o número de revisões realizadas?
-# Gráfico de dispersão do tamanho dos PRs em relação ao número de revisões
-scatter_plot(data, 'Total files', 'Total reviews', title='Tamanho dos PRs x Número de Revisões')
+# # B. Número de Revisões:
+# # RQ 05. Qual a relação entre o tamanho dos PRs e o número de revisões realizadas?
+# # Gráfico de dispersão do tamanho dos PRs em relação ao número de revisões
+# scatter_plot(data, 'Total files', 'Total reviews', title='Tamanho dos PRs x Número de Revisões')
 
-# RQ 06. Qual a relação entre o tempo de análise dos PRs e o número de revisões realizadas?
-# Gráfico de dispersão do tempo de análise em relação ao número de revisões
-scatter_plot(data, 'Merge Analysis Time', 'Total reviews', title='Tempo de Análise - Merged x Número de Revisões')
-scatter_plot(data, 'Closed Analysis Time', 'Total reviews', title='Tempo de Análise - Closed x Número de Revisões')
+# # RQ 06. Qual a relação entre o tempo de análise dos PRs e o número de revisões realizadas?
+# # Gráfico de dispersão do tempo de análise em relação ao número de revisões
+# scatter_plot(data, 'Merge Analysis Time', 'Total reviews', title='Tempo de Análise - Merged x Número de Revisões')
+# scatter_plot(data, 'Closed Analysis Time', 'Total reviews', title='Tempo de Análise - Closed x Número de Revisões')
 
-# RQ 07. Qual a relação entre a descrição dos PRs e o número de revisões realizadas?
-# Gráfico de dispersão do tamanho do texto da descrição em relação ao número de revisões
-scatter_plot(data, 'Text Length', 'Total reviews', title='Tamanho do Texto x Número de Revisões')
+# # RQ 07. Qual a relação entre a descrição dos PRs e o número de revisões realizadas?
+# # Gráfico de dispersão do tamanho do texto da descrição em relação ao número de revisões
+# scatter_plot(data, 'Text Length', 'Total reviews', title='Tamanho do Texto x Número de Revisões')
 
-# RQ 08. Qual a relação entre as interações nos PRs e o número de revisões realizadas?
-# Gráfico de dispersão do número de participantes em relação ao número de revisões
-scatter_plot(data, 'Participants', 'Total reviews', title='Participantes x Número de Revisões')
+# # RQ 08. Qual a relação entre as interações nos PRs e o número de revisões realizadas?
+# # Gráfico de dispersão do número de participantes em relação ao número de revisões
+# scatter_plot(data, 'Participants', 'Total reviews', title='Participantes x Número de Revisões')
 
-# Gráfico de dispersão do número de comentários em relação ao número de revisões
-scatter_plot(data, 'Comments', 'Total reviews', title='Comentários x Número de Revisões')
+# # Gráfico de dispersão do número de comentários em relação ao número de revisões
+# scatter_plot(data, 'Comments', 'Total reviews', title='Comentários x Número de Revisões')
 
 
-# Calculando a correlação de Spearman
-correlation_data = data[['Text Length', 'Merge Analysis Time', 'Participants', 'Comments', 'Total reviews']]
-correlation_matrix = correlation_data.corr(method='spearman')
+# # Calculando a correlação de Spearman
+# correlation_data = data[['Text Length', 'Merge Analysis Time', 'Participants', 'Comments', 'Total reviews']]
+# correlation_matrix = correlation_data.corr(method='spearman')
 
-correlation_matrix.to_csv('correlation_matrix.csv')
+# correlation_matrix.to_csv('correlation_matrix.csv')
 
-sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f")
-plt.title('Matriz de Correlação (Spearman)')
-plt.show()
+# sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f")
+# plt.title('Matriz de Correlação (Spearman)')
+# plt.show()
