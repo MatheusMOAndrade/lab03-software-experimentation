@@ -1,4 +1,5 @@
 import pandas as pd
+import seaborn as sns
 import matplotlib.pyplot as plt
 from math import ceil
 
@@ -31,38 +32,36 @@ data['Analysis time'] = data['Analysis time'].apply(lambda x: ceil(x))
 print(data.head())
 print(data.info())
 
-# RQ 01. Qual a relação entre o número de PRs mergeados e fechados e o total de arquivos?
+# RQ01. Qual a relação entre o número de PRs mergeados e fechados e o total de arquivos?
 scatter_plot(data, 'Total PRs', 'Total files', title='Número de PRs (Mergeados e fechados) x Total de arquivos')
 
-# RQ 02. Qual a relação entre o número de PRs mergeados e fechados e o tempo de análise dos PRs?
+# RQ02. Qual a relação entre o número de PRs mergeados e fechados e o tempo de análise dos PRs?
 scatter_plot(data, 'Total PRs', 'Analysis time', title='Número de PRs (Mergeados e fechados) x Tempo médio de análise [Dias]')
 
-# RQ 03. Qual a relação entre o número de PRs mergeados e fechados e o número de caracteres do corpo de descrição do PR?
+# RQ03. Qual a relação entre o número de PRs mergeados e fechados e o número de caracteres do corpo de descrição do PR?
 scatter_plot(data, 'Total PRs', 'Description', title='Número de PRs (Mergeados e fechados) x Tamanho do texto da descrição [Caracteres]')
 
-# RQ 04. Qual a relação entre o número de PRs mergeados e fechados e o número de comentários?
+# RQ04. Qual a relação entre o número de PRs mergeados e fechados e o número de comentários?
 scatter_plot(data, 'Total PRs', 'Interactions', title='Número de PRs (Mergeados e fechados) x Número de Comentários')
 
-# B. Número de Revisões:
-# RQ 05. Qual a relação entre o tamanho dos PRs e o número de revisões realizadas?
+# RQ05. Qual a relação entre o tamanho dos PRs e o número de revisões realizadas?
 scatter_plot(data, 'Total files', 'Total reviews', title='Tamanho dos PRs x Total de arquivos')
 
-# RQ 06. Qual a relação entre o tempo de análise dos PRs e o número de revisões realizadas?
+# RQ06. Qual a relação entre o tempo de análise dos PRs e o número de revisões realizadas?
 scatter_plot(data, 'Analysis time', 'Total reviews', title='Tempo médio de análise [Dias] x Número de Revisões')
 
-# RQ 07. Qual a relação entre a descrição dos PRs e o número de revisões realizadas?
+# RQ07. Qual a relação entre a descrição dos PRs e o número de revisões realizadas?
 scatter_plot(data, 'Description', 'Total reviews', title='Tamanho do texto da descrição [Caracteres] x Número de Revisões')
 
-# RQ 08. Qual a relação entre as interações nos PRs e o número de revisões realizadas?
+# RQ08. Qual a relação entre as interações nos PRs e o número de revisões realizadas?
 scatter_plot(data, 'Interactions', 'Total reviews', title='Número de Comentários x Número de Revisões')
 
+# Correlação de Spearman
+correlation_data = data[['Total PRs', 'Total reviews', 'Total files', 'Analysis time', 'Description', 'Interactions']]
+correlation_matrix = correlation_data.corr(method='spearman')
 
-# Calculando a correlação de Spearman
-# correlation_data = data[['Total PRs', 'Total reviews', 'Total files', 'Analysis time', 'Description', 'Interactions']]
-# correlation_matrix = correlation_data.corr(method='spearman')
+correlation_matrix.to_csv('correlation_matrix.csv')
 
-# correlation_matrix.to_csv('correlation_matrix.csv')
-
-# sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f")
-# plt.title('Matriz de Correlação (Spearman)')
-# plt.show()
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f")
+plt.title('Matriz de Correlação (Spearman)')
+plt.show()
